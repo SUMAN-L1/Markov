@@ -4,51 +4,62 @@ import numpy as np
 
 st.title("Transitional Probability Matrix / Markov Chain Analysis")
 
-# Upload CSV file
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+# Upload file
+uploaded_file = st.file_uploader("Choose a file", type=["csv", "xlsx", "xls"])
+
+def load_data(file):
+    if file.name.endswith('.csv'):
+        return pd.read_csv(file)
+    elif file.name.endswith('.xlsx') or file.name.endswith('.xls'):
+        return pd.read_excel(file)
+    else:
+        return None
 
 if uploaded_file is not None:
-    # Read the CSV file
-    df = pd.read_csv(uploaded_file)
-    st.write("Data Preview:")
-    st.write(df.head())
+    # Read the file
+    df = load_data(uploaded_file)
+    if df is not None:
+        st.write("Data Preview:")
+        st.write(df.head())
 
-    # Select the column containing the states (countries/crop names)
-    state_column = st.selectbox("Select the state column", df.columns)
+        # Select the column containing the states (countries/crop names)
+        state_column = st.selectbox("Select the state column", df.columns)
 
-    # Select the year column
-    year_column = st.selectbox("Select the year column", df.columns)
+        # Select the year column
+        year_column = st.selectbox("Select the year column", df.columns)
 
-    if state_column and year_column:
-        # Ensure the data is sorted by year
-        df = df.sort_values(by=year_column)
+        if state_column and year_column:
+            # Ensure the data is sorted by year
+            df = df.sort_values(by=year_column)
 
-        # Create the state transition pairs
-        state_pairs = list(zip(df[state_column][:-1], df[state_column][1:]))
+            # Create the state transition pairs
+            state_pairs = list(zip(df[state_column][:-1], df[state_column][1:]))
 
-        # Create the transition matrix
-        unique_states = df[state_column].unique()
-        transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
+            # Create the transition matrix
+            unique_states = df[state_column].unique()
+            transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
 
-        for (current_state, next_state) in state_pairs:
-            transition_matrix.loc[current_state, next_state] += 1
+            for (current_state, next_state) in state_pairs:
+                transition_matrix.loc[current_state, next_state] += 1
 
-        # Convert counts to probabilities
-        transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0)
+            # Convert counts to probabilities
+            transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0)
 
-        st.write("Transitional Probability Matrix:")
-        st.write(transition_matrix)
+            st.write("Transitional Probability Matrix:")
+            st.write(transition_matrix)
 
-        # Provide an option to download the transition matrix
-        @st.cache_data
-        def convert_df(df):
-            return df.to_csv().encode('utf-8')
+            # Provide an option to download the transition matrix
+            @st.cache_data
+            def convert_df(df):
+                return df.to_csv().encode('utf-8')
 
-        csv = convert_df(transition_matrix)
+            csv = convert_df(transition_matrix)
 
-        st.download_button(
-            label="Download Transition Matrix as CSV",
-            data=csv,
-            file_name='transition_matrix.csv',
-            mime='text/csv',
-        )
+            st.download_button(
+                label="Download Transition Matrix as CSV",
+                data=csv,
+                file_name='transition_matrix.csv',
+                mime='text/csv',
+            )
+    else:
+        st.error("The uploaded file format is not supported.")
