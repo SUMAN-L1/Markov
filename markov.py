@@ -1,68 +1,48 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
-st.title("Transitional Probability Matrix / Markov Chain Analysis")
+# Load data
+data = pd.read_excel('/mnt/data/MARKOV_SILK.xlsx')
 
-# Upload file
-uploaded_file = st.file_uploader("Choose a file", type=["csv", "xlsx", "xls"])
+# Exclude "Year" and "World" columns
+data = data.drop(columns=['Year', 'World'])
 
-def load_data(file):
-    if file.name.endswith('.csv'):
-        return pd.read_csv(file)
-    elif file.name.endswith('.xlsx') or file.name.endswith('.xls'):
-        return pd.read_excel(file)
-    else:
-        return None
+# Define the countries (excluding "World")
+countries = data.columns.tolist()
 
-if uploaded_file is not None:
-    # Read the file
-    df = load_data(uploaded_file)
-    if df is not None:
-        st.write("Data Preview:")
-        st.write(df.head())
+# Normalize the data to get transition probabilities
+transitions = data.diff().dropna().apply(lambda x: x > 0).astype(int)
 
-        # Exclude 'Year' and 'World' columns from analysis
-        if 'Year' in df.columns and 'World' in df.columns:
-            df = df.drop(columns=['Year', 'World'])
+# Calculate transition probability matrix
+transition_matrix = np.zeros((len(countries), len(countries)))
 
-        # Create state transition pairs
-        transitions = []
-        for i in range(len(df) - 1):
-            for col in df.columns:
-                current_state = df.iloc[i][col]
-                next_state = df.iloc[i + 1][col]
-                transitions.append((current_state, next_state))
+for i in range(len(countries)):
+    for j in range(len(countries)):
+        if i != j:
+            transition_matrix[i, j] = transitions.iloc[:, j][transitions.iloc[:, i] == 1].sum() / transitions.iloc[:, i].sum()
 
-        # Get unique states
-        unique_states = list(set(df.values.flatten()))
-        unique_states.sort()
+# Fill diagonal with probabilities of staying in the same state
+for i in range(len(countries)):
+    transition_matrix[i, i] = 1 - transition_matrix[i].sum()
 
-        # Initialize transition matrix
-        transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
+# Create DataFrame for the transition matrix
+transition_matrix_df = pd.DataFrame(transition_matrix, index=countries, columns=countries)
 
-        # Populate transition matrix with counts
-        for (current_state, next_state) in transitions:
-            transition_matrix.loc[current_state, next_state] += 1
+# Round to 4 decimals
+transition_matrix_df = transition_matrix_df.round(4)
 
-        # Convert counts to probabilities
-        transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0).fillna(0)
-        transition_matrix = transition_matrix.applymap(lambda x: round(x, 4))
+# Streamlit app
+st.title('Markov Chain Analysis of Silk Production')
 
-        st.write("Transitional Probability Matrix:")
-        st.write(transition_matrix)
+st.write('## Transitional Probability Matrix')
+st.dataframe(transition_matrix_df)
 
-        # Provide an option to download the transition matrix
-        @st.cache_data
-        def convert_df(df):
-            return df.to_csv().encode('utf-8')
-
-        csv = convert_df(transition_matrix)
-
-        st.download_button(
-            label="Download Transition Matrix as CSV",
-            data=csv,
-            file_name='transition_matrix.csv',
-            mime='text/csv',
-        )
-    else:
-        st.error("The uploaded file format is not supported.")
+# Optional: download button for the matrix
+csv = transition_matrix_df.to_csv().encode('utf-8')
+st.download_button(
+    label="Download Transition Matrix as CSV",
+    data=csv,
+    file_name='transition_matrix.csv',
+    mime='text/csv',
+)
