@@ -26,18 +26,22 @@ if uploaded_file is not None:
         if 'Year' in df.columns and 'World' in df.columns:
             df = df.drop(columns=['Year', 'World'])
 
-        # Flatten the dataframe and create state transition pairs
-        df = df.applymap(str)
+        # Create state transition pairs
         transitions = []
+        for i in range(len(df) - 1):
+            for col in df.columns:
+                current_state = df.iloc[i][col]
+                next_state = df.iloc[i + 1][col]
+                transitions.append((current_state, next_state))
 
-        for col in df.columns:
-            col_transitions = list(zip(df[col][:-1], df[col][1:]))
-            transitions.extend(col_transitions)
+        # Get unique states
+        unique_states = list(set(df.values.flatten()))
+        unique_states.sort()
 
-        # Create the transition matrix
-        unique_states = pd.unique(df.values.ravel('K'))
+        # Initialize transition matrix
         transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
 
+        # Populate transition matrix with counts
         for (current_state, next_state) in transitions:
             transition_matrix.loc[current_state, next_state] += 1
 
