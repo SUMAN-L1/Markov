@@ -31,15 +31,15 @@ if uploaded_file is not None:
         transitions = []
 
         for col in df.columns:
-            transitions.extend(list(zip(df[col][:-1], df[col][1:])))
+            col_transitions = list(zip(df[col][:-1], df[col][1:]))
+            transitions.extend(col_transitions)
 
         # Create the transition matrix
-        unique_states = df.columns
+        unique_states = pd.unique(df.values.ravel('K'))
         transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
 
         for (current_state, next_state) in transitions:
-            if current_state in unique_states and next_state in unique_states:
-                transition_matrix.loc[current_state, next_state] += 1
+            transition_matrix.loc[current_state, next_state] += 1
 
         # Convert counts to probabilities
         transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0).fillna(0)
