@@ -22,44 +22,42 @@ if uploaded_file is not None:
         st.write("Data Preview:")
         st.write(df.head())
 
-        # Select the column containing the states (countries/crop names)
-        state_column = st.selectbox("Select the state column", df.columns)
+        # Exclude 'Year' and 'World' columns from analysis
+        if 'Year' in df.columns and 'World' in df.columns:
+            df = df.drop(columns=['Year', 'World'])
 
-        # Select the year column
-        year_column = st.selectbox("Select the year column", df.columns)
+        # Flatten the dataframe and create state transition pairs
+        df = df.applymap(str)
+        transitions = []
 
-        if state_column and year_column:
-            # Ensure the data is sorted by year
-            df = df.sort_values(by=year_column)
+        for col in df.columns:
+            transitions.extend(list(zip(df[col][:-1], df[col][1:])))
 
-            # Create the state transition pairs
-            state_pairs = list(zip(df[state_column][:-1], df[state_column][1:]))
+        # Create the transition matrix
+        unique_states = pd.unique(df.values.ravel('K'))
+        transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
 
-            # Create the transition matrix
-            unique_states = df[state_column].unique()
-            transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
+        for (current_state, next_state) in transitions:
+            transition_matrix.loc[current_state, next_state] += 1
 
-            for (current_state, next_state) in state_pairs:
-                transition_matrix.loc[current_state, next_state] += 1
+        # Convert counts to probabilities
+        transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0).fillna(0)
 
-            # Convert counts to probabilities
-            transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0)
+        st.write("Transitional Probability Matrix:")
+        st.write(transition_matrix)
 
-            st.write("Transitional Probability Matrix:")
-            st.write(transition_matrix)
+        # Provide an option to download the transition matrix
+        @st.cache_data
+        def convert_df(df):
+            return df.to_csv().encode('utf-8')
 
-            # Provide an option to download the transition matrix
-            @st.cache_data
-            def convert_df(df):
-                return df.to_csv().encode('utf-8')
+        csv = convert_df(transition_matrix)
 
-            csv = convert_df(transition_matrix)
-
-            st.download_button(
-                label="Download Transition Matrix as CSV",
-                data=csv,
-                file_name='transition_matrix.csv',
-                mime='text/csv',
-            )
+        st.download_button(
+            label="Download Transition Matrix as CSV",
+            data=csv,
+            file_name='transition_matrix.csv',
+            mime='text/csv',
+        )
     else:
         st.error("The uploaded file format is not supported.")
