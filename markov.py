@@ -8,26 +8,27 @@ from openpyxl.drawing.image import Image
 from transitions import Machine
 
 # Function to create transition matrix
-def create_transition_matrix(data, state_names):
-    # Convert data to probabilities
-    transition_matrix = pd.DataFrame(0, index=state_names, columns=state_names)
+def create_transition_matrix(data):
+    unique_states = pd.unique(data.values.ravel())  # Get unique states from the data
+    transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
     
     # Loop through each row and count transitions between consecutive columns
     for i in range(len(data) - 1):
-        current_state = data.iloc[i]
-        next_state = data.iloc[i + 1]
-        for j in range(len(state_names)):
-            transition_matrix.loc[current_state[j], next_state[j]] += 1
-
+        current_row = data.iloc[i].values
+        next_row = data.iloc[i + 1].values
+        for current_state, next_state in zip(current_row, next_row):
+            if current_state in unique_states and next_state in unique_states:
+                transition_matrix.loc[current_state, next_state] += 1
+    
     # Normalize by row to get probabilities
     transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0)
     transition_matrix.fillna(0, inplace=True)  # Replace NaNs with zeros
     return transition_matrix
 
 # Function to plot heatmap
-def plot_heatmap(matrix, state_names):
+def plot_heatmap(matrix):
     plt.figure(figsize=(10, 8))
-    sns.heatmap(matrix, annot=True, fmt=".4f", cmap="coolwarm", xticklabels=state_names, yticklabels=state_names)
+    sns.heatmap(matrix, annot=True, fmt=".4f", cmap="coolwarm")
     plt.title("Transition Matrix Heatmap")
     plt.xlabel("To State")
     plt.ylabel("From State")
@@ -38,17 +39,17 @@ def plot_heatmap(matrix, state_names):
     st.pyplot(plt)
 
 # Function to export results to Excel
-def export_to_excel(transition_matrix, state_names):
+def export_to_excel(transition_matrix):
     wb = Workbook()
     ws = wb.active
     ws.title = "Transition Matrix"
     
-    # Write transition matrix
-    for i, state in enumerate(state_names):
-        ws.cell(row=1, column=i+2, value=state)
-        ws.cell(row=i+2, column=1, value=state)
-        for j, value in enumerate(transition_matrix.iloc[i]):
-            ws.cell(row=i+2, column=j+2, value=value)
+    # Write transition matrix to Excel
+    for i, row in enumerate(transition_matrix.index):
+        ws.cell(row=i+2, column=1, value=row)
+        for j, col in enumerate(transition_matrix.columns):
+            ws.cell(row=1, column=j+2, value=col)
+            ws.cell(row=i+2, column=j+2, value=transition_matrix.iloc[i, j])
     
     # Add heatmap image
     img = Image("transition_matrix_heatmap.png")
@@ -72,15 +73,19 @@ if uploaded_file:
     if columns:
         data_selected = data[columns]
         
+        # Ensure data is of the correct type (discrete or categorical)
+        for col in data_selected.columns:
+            if data_selected[col].dtype == 'float64':
+                st.warning(f"Column '{col}' contains numerical values. It may need to be categorized or excluded.")
+        
         # Create transition matrix
-        transition_matrix = create_transition_matrix(data_selected, columns)
-        state_names = columns
+        transition_matrix = create_transition_matrix(data_selected)
         
         # Plot heatmap
-        plot_heatmap(transition_matrix, state_names)
+        plot_heatmap(transition_matrix)
         
         # Export results to Excel
-        export_to_excel(transition_matrix, state_names)
+        export_to_excel(transition_matrix)
         
         st.success("Analysis complete! Results exported to 'Markov_Chain_Results.xlsx'.")
         
