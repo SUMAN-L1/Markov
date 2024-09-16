@@ -55,7 +55,7 @@ if uploaded_file is not None:
             ws.cell(row=i, column=j, value=value)
 
     # Save Excel file
-    output_filename = "Markov_Chain_Results.xlsx"
+    output_filename = "Markov_Results.xlsx"
     wb.save(output_filename)
 
     # Offer download of the Excel file
