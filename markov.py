@@ -1,48 +1,85 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from markovchain import MarkovChain
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image
 
-# Load data
-data = pd.read_excel('/mnt/data/MARKOV_SILK.xlsx')
+# Function to create transition matrix
+def create_transition_matrix(data):
+    transition_matrix = data.div(data.sum(axis=1), axis=0).T
+    return transition_matrix
 
-# Exclude "Year" and "World" columns
-data = data.drop(columns=['Year', 'World'])
+# Function to plot heatmap
+def plot_heatmap(matrix, state_names):
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(matrix, annot=True, fmt=".4f", cmap="coolwarm", xticklabels=state_names, yticklabels=state_names)
+    plt.title("Transition Matrix Heatmap")
+    plt.xlabel("To State")
+    plt.ylabel("From State")
+    plt.xticks(rotation=45, ha='right', fontsize=12, fontweight='bold')
+    plt.yticks(fontsize=12, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig("transition_matrix_heatmap.png")
+    st.pyplot(plt)
 
-# Define the countries (excluding "World")
-countries = data.columns.tolist()
-
-# Normalize the data to get transition probabilities
-transitions = data.diff().dropna().apply(lambda x: x > 0).astype(int)
-
-# Calculate transition probability matrix
-transition_matrix = np.zeros((len(countries), len(countries)))
-
-for i in range(len(countries)):
-    for j in range(len(countries)):
-        if i != j:
-            transition_matrix[i, j] = transitions.iloc[:, j][transitions.iloc[:, i] == 1].sum() / transitions.iloc[:, i].sum()
-
-# Fill diagonal with probabilities of staying in the same state
-for i in range(len(countries)):
-    transition_matrix[i, i] = 1 - transition_matrix[i].sum()
-
-# Create DataFrame for the transition matrix
-transition_matrix_df = pd.DataFrame(transition_matrix, index=countries, columns=countries)
-
-# Round to 4 decimals
-transition_matrix_df = transition_matrix_df.round(4)
+# Function to export results to Excel
+def export_to_excel(transition_matrix, state_names):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Transition Matrix"
+    
+    # Write transition matrix
+    for i, state in enumerate(state_names):
+        ws.cell(row=1, column=i+2, value=state)
+        ws.cell(row=i+2, column=1, value=state)
+        for j, value in enumerate(transition_matrix[i]):
+            ws.cell(row=i+2, column=j+2, value=value)
+    
+    # Add heatmap image
+    img = Image("transition_matrix_heatmap.png")
+    ws.add_image(img, "J1")
+    
+    wb.save("Markov_Chain_Results.xlsx")
 
 # Streamlit app
-st.title('Markov Chain Analysis of Silk Production')
+st.title("Markov Chain Analysis by Suman_Econ")
 
-st.write('## Transitional Probability Matrix')
-st.dataframe(transition_matrix_df)
+# File upload
+uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
 
-# Optional: download button for the matrix
-csv = transition_matrix_df.to_csv().encode('utf-8')
-st.download_button(
-    label="Download Transition Matrix as CSV",
-    data=csv,
-    file_name='transition_matrix.csv',
-    mime='text/csv',
-)
+if uploaded_file:
+    data = pd.read_excel(uploaded_file)
+    
+    # Select columns
+    columns = st.multiselect("Select columns for analysis (excluding 'Total' and 'Years')", data.columns)
+    if columns:
+        data_selected = data[columns]
+        
+        # Create transition matrix
+        transition_matrix = create_transition_matrix(data_selected)
+        state_names = columns
+        
+        # Plot heatmap
+        plot_heatmap(transition_matrix, state_names)
+        
+        # Create Markov chain object
+        mc = MarkovChain(transition_matrix, state_names)
+        
+        # Export results to Excel
+        export_to_excel(transition_matrix, state_names)
+        
+        st.success("Analysis complete! Results exported to 'Markov_Chain_Results.xlsx'.")
+
+        # Interpretation
+        st.subheader("Interpretation")
+        st.write("""
+        The transition matrix heatmap shows the probabilities of transitioning from one state to another. 
+        The rows represent the current state, and the columns represent the next state. 
+        Higher values indicate a higher probability of transitioning to that state.
+        
+        The Markov chain object created can be used to predict future states based on the current state.
+        For example, if you start in a particular state, you can use the transition matrix to determine the probability of moving to other states in the next time period.
+        """)
