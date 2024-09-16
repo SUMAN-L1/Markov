@@ -28,20 +28,7 @@ if uploaded_file is not None:
     st.write("Transition Probability Matrix:")
     st.dataframe(transition_matrix)
 
-    # Create a heatmap with seaborn
-    plt.figure(figsize=(12, 10))
-
-    # Adding annotations with specific font size for better visibility
-    sns.heatmap(transition_matrix, annot=True, fmt=".4f", cmap="coolwarm", annot_kws={"size": 10}, linewidths=0.5, linecolor='black')
-
-    plt.title("Transition Matrix Heatmap", fontsize=16)
-    plt.xlabel("To State", fontsize=12)
-    plt.ylabel("From State", fontsize=12)
-
-    # Display the heatmap in Streamlit
-    st.pyplot(plt)
-
-    # Export results to Excel
+       # Export results to Excel
     wb = Workbook()
     ws = wb.active
     ws.title = "Transition Matrix"
