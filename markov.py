@@ -3,7 +3,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from openpyxl import Workbook
-import numpy as np
 
 # Load the Excel file
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx", "xls"])
@@ -31,16 +30,13 @@ if uploaded_file is not None:
 
     # Create a heatmap with seaborn
     plt.figure(figsize=(12, 10))
-    heatmap = sns.heatmap(transition_matrix, annot=True, fmt=".4f", cmap="viridis", 
-                          cbar_kws={'label': 'Transition Probability'}, linewidths=0.5, linecolor='black')
 
-    # Customize labels and title
-    heatmap.set_title("Transition Matrix Heatmap", fontsize=16)
-    heatmap.set_xlabel("To State", fontsize=12)
-    heatmap.set_ylabel("From State", fontsize=12)
+    # Adding annotations with specific font size for better visibility
+    sns.heatmap(transition_matrix, annot=True, fmt=".4f", cmap="coolwarm", annot_kws={"size": 10}, linewidths=0.5, linecolor='black')
 
-    # Rotate x-axis labels for better readability
-    plt.xticks(rotation=45)
+    plt.title("Transition Matrix Heatmap", fontsize=16)
+    plt.xlabel("To State", fontsize=12)
+    plt.ylabel("From State", fontsize=12)
 
     # Display the heatmap in Streamlit
     st.pyplot(plt)
@@ -49,7 +45,7 @@ if uploaded_file is not None:
     wb = Workbook()
     ws = wb.active
     ws.title = "Transition Matrix"
-    
+
     # Write the transition matrix to the Excel file
     for i, col in enumerate(transition_matrix.columns, 1):
         ws.cell(row=1, column=i + 1, value=col)
@@ -69,14 +65,13 @@ if uploaded_file is not None:
     # Interpretation
     st.subheader("Heatmap Interpretation")
     st.write("""
-    The heatmap visualizes the transition probabilities between different states. The cells in the heatmap represent the likelihood of transitioning from one state to another. 
-    - **Higher Values**: Indicate a higher probability of transitioning to that state from the current state.
-    - **Lower Values**: Indicate a lower probability of transitioning to that state.
+    The heatmap shows transition probabilities between different states. The numbers in each cell represent the exact probability of moving from one state (row) to another state (column).
 
-    **Key Points to Note:**
-    - Each row represents the current state, and each column represents the next state.
-    - The color gradient from dark purple to bright yellow represents the range of probabilities, with darker colors indicating lower probabilities and lighter colors indicating higher probabilities.
-    - The exact probability values are displayed on the heatmap, providing precise information on transition likelihoods.
+    **Key Interpretation Points:**
+    - Higher probabilities indicate a stronger likelihood of transitioning to a particular state.
+    - Each row shows the probability distribution from a specific current state, giving you an idea of future behavior.
+    - Use this matrix to identify dominant state transitions or areas where probabilities are very low, suggesting infrequent transitions.
 
-    By analyzing this heatmap, you can infer which states have strong tendencies to transition into other states and identify any patterns or anomalies in state transitions.
+    This tool helps analyze the dynamics between different categories or states over time, providing insight into patterns and potential areas for improvement or change.
     """)
+
