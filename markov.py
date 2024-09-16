@@ -25,17 +25,17 @@ def create_transition_matrix(data):
     transition_matrix.fillna(0, inplace=True)  # Replace NaNs with zeros
     return transition_matrix
 
-# Function to plot heatmap
-def plot_heatmap(matrix):
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(matrix, annot=True, fmt=".4f", cmap="coolwarm")
-    plt.title("Transition Matrix Heatmap")
-    plt.xlabel("To State")
-    plt.ylabel("From State")
-    plt.xticks(rotation=45, ha='right', fontsize=12, fontweight='bold')
-    plt.yticks(fontsize=12, fontweight='bold')
+# Function to plot a customized heatmap
+def plot_custom_heatmap(matrix):
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(matrix, annot=True, fmt=".4f", cmap="Blues", cbar_kws={'label': 'Transition Probability'})
+    plt.title("Customized Transition Probability Matrix Heatmap", fontsize=16, fontweight='bold')
+    plt.xlabel("To State", fontsize=14, fontweight='bold')
+    plt.ylabel("From State", fontsize=14, fontweight='bold')
+    plt.xticks(rotation=45, ha='right', fontsize=12)
+    plt.yticks(fontsize=12)
     plt.tight_layout()
-    plt.savefig("transition_matrix_heatmap.png")
+    plt.savefig("custom_transition_matrix_heatmap.png")
     st.pyplot(plt)
 
 # Function to export results to Excel
@@ -52,7 +52,7 @@ def export_to_excel(transition_matrix):
             ws.cell(row=i+2, column=j+2, value=transition_matrix.iloc[i, j])
     
     # Add heatmap image
-    img = Image("transition_matrix_heatmap.png")
+    img = Image("custom_transition_matrix_heatmap.png")
     ws.add_image(img, "J1")
     
     wb.save("Markov_Chain_Results.xlsx")
@@ -73,16 +73,15 @@ if uploaded_file:
     if columns:
         data_selected = data[columns]
         
-        # Ensure data is of the correct type (discrete or categorical)
-        for col in data_selected.columns:
-            if data_selected[col].dtype == 'float64':
-                st.warning(f"Column '{col}' contains numerical values. It may need to be categorized or excluded.")
-        
         # Create transition matrix
         transition_matrix = create_transition_matrix(data_selected)
         
-        # Plot heatmap
-        plot_heatmap(transition_matrix)
+        # Display the transition matrix
+        st.subheader("Transitional Probability Matrix")
+        st.dataframe(transition_matrix)
+        
+        # Plot customized heatmap
+        plot_custom_heatmap(transition_matrix)
         
         # Export results to Excel
         export_to_excel(transition_matrix)
@@ -92,10 +91,9 @@ if uploaded_file:
         # Interpretation
         st.subheader("Interpretation")
         st.write("""
-        The transition matrix heatmap shows the probabilities of transitioning from one state to another. 
-        The rows represent the current state, and the columns represent the next state. 
-        Higher values indicate a higher probability of transitioning to that state.
+        The transitional probability matrix shows the likelihood of moving from one state to another. 
+        The rows represent the current state, while the columns represent the next state. 
+        Higher values in the matrix indicate a stronger probability of transitioning to that state.
         
-        The Markov chain object created can be used to predict future states based on the current state.
-        For example, if you start in a particular state, you can use the transition matrix to determine the probability of moving to other states in the next time period.
+        The customized heatmap provides a visual representation of these probabilities, where darker colors indicate higher transition probabilities. This helps identify dominant transitions between states.
         """)
