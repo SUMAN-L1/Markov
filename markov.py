@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from openpyxl import Workbook
+import numpy as np
 
 # Load the Excel file
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx", "xls"])
@@ -31,10 +31,16 @@ if uploaded_file is not None:
 
     # Create a heatmap with seaborn
     plt.figure(figsize=(12, 10))
-    sns.heatmap(transition_matrix, annot=True, fmt=".4f", cmap="viridis", linewidths=0.5, linecolor='black')
-    plt.title("Transition Matrix Heatmap")
-    plt.xlabel("To State")
-    plt.ylabel("From State")
+    heatmap = sns.heatmap(transition_matrix, annot=True, fmt=".4f", cmap="viridis", 
+                          cbar_kws={'label': 'Transition Probability'}, linewidths=0.5, linecolor='black')
+
+    # Customize labels and title
+    heatmap.set_title("Transition Matrix Heatmap", fontsize=16)
+    heatmap.set_xlabel("To State", fontsize=12)
+    heatmap.set_ylabel("From State", fontsize=12)
+
+    # Rotate x-axis labels for better readability
+    plt.xticks(rotation=45)
 
     # Display the heatmap in Streamlit
     st.pyplot(plt)
