@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from markovchain import markovChain
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
+from transitions import Machine  # New library for state transitions
 
 # Function to create transition matrix
 def create_transition_matrix(data):
@@ -65,14 +65,17 @@ if uploaded_file:
         # Plot heatmap
         plot_heatmap(transition_matrix, state_names)
         
-        # Create Markov chain object
-        mc = MarkovChain(transition_matrix, state_names)
+        # Create state transition model
+        class MarkovProcess:
+            pass
         
+        mc = Machine(model=MarkovProcess(), states=state_names, transitions=[], initial=state_names[0])
+
         # Export results to Excel
         export_to_excel(transition_matrix, state_names)
         
         st.success("Analysis complete! Results exported to 'Markov_Chain_Results.xlsx'.")
-
+        
         # Interpretation
         st.subheader("Interpretation")
         st.write("""
