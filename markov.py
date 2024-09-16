@@ -5,11 +5,23 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
-from transitions import Machine  # New library for state transitions
+from transitions import Machine
 
 # Function to create transition matrix
-def create_transition_matrix(data):
-    transition_matrix = data.div(data.sum(axis=1), axis=0).T
+def create_transition_matrix(data, state_names):
+    # Convert data to probabilities
+    transition_matrix = pd.DataFrame(0, index=state_names, columns=state_names)
+    
+    # Loop through each row and count transitions between consecutive columns
+    for i in range(len(data) - 1):
+        current_state = data.iloc[i]
+        next_state = data.iloc[i + 1]
+        for j in range(len(state_names)):
+            transition_matrix.loc[current_state[j], next_state[j]] += 1
+
+    # Normalize by row to get probabilities
+    transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0)
+    transition_matrix.fillna(0, inplace=True)  # Replace NaNs with zeros
     return transition_matrix
 
 # Function to plot heatmap
@@ -35,7 +47,7 @@ def export_to_excel(transition_matrix, state_names):
     for i, state in enumerate(state_names):
         ws.cell(row=1, column=i+2, value=state)
         ws.cell(row=i+2, column=1, value=state)
-        for j, value in enumerate(transition_matrix[i]):
+        for j, value in enumerate(transition_matrix.iloc[i]):
             ws.cell(row=i+2, column=j+2, value=value)
     
     # Add heatmap image
@@ -53,24 +65,20 @@ uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
 if uploaded_file:
     data = pd.read_excel(uploaded_file)
     
-    # Select columns
-    columns = st.multiselect("Select columns for analysis (excluding 'Total' and 'Years')", data.columns)
+    # Automatically exclude 'Year' and 'Total' columns
+    columns = [col for col in data.columns if col.lower() not in ['year', 'years', 'total']]
+    st.write(f"Columns considered for analysis: {columns}")
+    
     if columns:
         data_selected = data[columns]
         
         # Create transition matrix
-        transition_matrix = create_transition_matrix(data_selected)
+        transition_matrix = create_transition_matrix(data_selected, columns)
         state_names = columns
         
         # Plot heatmap
         plot_heatmap(transition_matrix, state_names)
         
-        # Create state transition model
-        class MarkovProcess:
-            pass
-        
-        mc = Machine(model=MarkovProcess(), states=state_names, transitions=[], initial=state_names[0])
-
         # Export results to Excel
         export_to_excel(transition_matrix, state_names)
         
