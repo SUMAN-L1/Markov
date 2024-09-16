@@ -5,95 +5,84 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
-from transitions import Machine
+from markovchain import MarkovChain
+from sklearn.preprocessing import normalize
 
-# Function to create transition matrix
+# Function to normalize the data to create transition probabilities
 def create_transition_matrix(data):
-    unique_states = pd.unique(data.values.ravel())  # Get unique states from the data
-    transition_matrix = pd.DataFrame(0, index=unique_states, columns=unique_states)
-    
-    # Loop through each row and count transitions between consecutive columns
-    for i in range(len(data) - 1):
-        current_row = data.iloc[i].values
-        next_row = data.iloc[i + 1].values
-        for current_state, next_state in zip(current_row, next_row):
-            if current_state in unique_states and next_state in unique_states:
-                transition_matrix.loc[current_state, next_state] += 1
-    
-    # Normalize by row to get probabilities
-    transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0)
-    transition_matrix.fillna(0, inplace=True)  # Replace NaNs with zeros
+    transition_matrix = data.div(data.sum(axis=1), axis=0)
     return transition_matrix
 
-# Function to plot a customized heatmap
-def plot_custom_heatmap(matrix):
-    plt.figure(figsize=(12, 8))
-    sns.heatmap(matrix, annot=True, fmt=".4f", cmap="Blues", cbar_kws={'label': 'Transition Probability'})
-    plt.title("Customized Transition Probability Matrix Heatmap", fontsize=16, fontweight='bold')
+# Function to plot the heatmap using seaborn and matplotlib
+def plot_heatmap(transition_matrix, state_names):
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(transition_matrix, annot=True, fmt=".4f", cmap="coolwarm", xticklabels=state_names, yticklabels=state_names)
+    plt.title("Transition Matrix Heatmap", fontsize=16, fontweight='bold')
     plt.xlabel("To State", fontsize=14, fontweight='bold')
     plt.ylabel("From State", fontsize=14, fontweight='bold')
     plt.xticks(rotation=45, ha='right', fontsize=12)
     plt.yticks(fontsize=12)
     plt.tight_layout()
-    plt.savefig("custom_transition_matrix_heatmap.png")
+    plt.savefig("transition_matrix_heatmap.png")
     st.pyplot(plt)
 
-# Function to export results to Excel
-def export_to_excel(transition_matrix):
+# Function to export transition matrix and heatmap to Excel
+def export_to_excel(transition_matrix, state_names):
     wb = Workbook()
     ws = wb.active
     ws.title = "Transition Matrix"
     
     # Write transition matrix to Excel
-    for i, row in enumerate(transition_matrix.index):
+    for i, row in enumerate(state_names):
         ws.cell(row=i+2, column=1, value=row)
-        for j, col in enumerate(transition_matrix.columns):
+        for j, col in enumerate(state_names):
             ws.cell(row=1, column=j+2, value=col)
-            ws.cell(row=i+2, column=j+2, value=transition_matrix.iloc[i, j])
+            ws.cell(row=i+2, column=j+2, value=transition_matrix.loc[row, col])
     
     # Add heatmap image
-    img = Image("custom_transition_matrix_heatmap.png")
+    img = Image("transition_matrix_heatmap.png")
     ws.add_image(img, "J1")
     
     wb.save("Markov_Chain_Results.xlsx")
 
-# Streamlit app
-st.title("Markov Chain Analysis by Suman_Econ")
+# Streamlit app interface
+st.title("Markov Chain Analysis")
 
-# File upload
-uploaded_file = st.file_uploader("Choose an Excel file", type="xlsx")
+# File uploader
+uploaded_file = st.file_uploader("Upload your Excel file", type="xlsx")
 
 if uploaded_file:
+    # Load data
     data = pd.read_excel(uploaded_file)
     
-    # Automatically exclude 'Year' and 'Total' columns
+    # Exclude 'Year' and 'Total' columns
     columns = [col for col in data.columns if col.lower() not in ['year', 'years', 'total']]
-    st.write(f"Columns considered for analysis: {columns}")
     
     if columns:
-        data_selected = data[columns]
+        # Extract relevant columns (states)
+        states = data[columns]
+        st.write(f"Selected columns: {columns}")
         
-        # Create transition matrix
-        transition_matrix = create_transition_matrix(data_selected)
+        # Normalize the data to create the transition matrix
+        transition_matrix = create_transition_matrix(states)
+        state_names = columns
         
         # Display the transition matrix
-        st.subheader("Transitional Probability Matrix")
+        st.subheader("Transition Probability Matrix")
         st.dataframe(transition_matrix)
         
-        # Plot customized heatmap
-        plot_custom_heatmap(transition_matrix)
+        # Plot heatmap
+        plot_heatmap(transition_matrix, state_names)
         
         # Export results to Excel
-        export_to_excel(transition_matrix)
+        export_to_excel(transition_matrix, state_names)
         
         st.success("Analysis complete! Results exported to 'Markov_Chain_Results.xlsx'.")
         
         # Interpretation
         st.subheader("Interpretation")
         st.write("""
-        The transitional probability matrix shows the likelihood of moving from one state to another. 
-        The rows represent the current state, while the columns represent the next state. 
-        Higher values in the matrix indicate a stronger probability of transitioning to that state.
-        
-        The customized heatmap provides a visual representation of these probabilities, where darker colors indicate higher transition probabilities. This helps identify dominant transitions between states.
+        The transition probability matrix shows the likelihood of transitioning from one state to another. 
+        Higher values indicate a stronger probability of transitioning to the corresponding state.
+        The heatmap provides a visual representation of these probabilities, with color intensity representing the magnitude of the probability.
         """)
