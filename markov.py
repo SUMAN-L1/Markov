@@ -30,8 +30,8 @@ if uploaded_file is not None:
     st.dataframe(transition_matrix)
 
     # Create a heatmap with seaborn
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(transition_matrix, annot=True, fmt=".4f", cmap="coolwarm")
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(transition_matrix, annot=True, fmt=".4f", cmap="viridis", linewidths=0.5, linecolor='black')
     plt.title("Transition Matrix Heatmap")
     plt.xlabel("To State")
     plt.ylabel("From State")
@@ -59,3 +59,18 @@ if uploaded_file is not None:
     # Offer download of the Excel file
     with open(output_filename, "rb") as file:
         btn = st.download_button(label="Download Results", data=file, file_name=output_filename)
+
+    # Interpretation
+    st.subheader("Heatmap Interpretation")
+    st.write("""
+    The heatmap visualizes the transition probabilities between different states. The cells in the heatmap represent the likelihood of transitioning from one state to another. 
+    - **Higher Values**: Indicate a higher probability of transitioning to that state from the current state.
+    - **Lower Values**: Indicate a lower probability of transitioning to that state.
+
+    **Key Points to Note:**
+    - Each row represents the current state, and each column represents the next state.
+    - The color gradient from dark purple to bright yellow represents the range of probabilities, with darker colors indicating lower probabilities and lighter colors indicating higher probabilities.
+    - The exact probability values are displayed on the heatmap, providing precise information on transition likelihoods.
+
+    By analyzing this heatmap, you can infer which states have strong tendencies to transition into other states and identify any patterns or anomalies in state transitions.
+    """)
